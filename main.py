@@ -10,7 +10,7 @@ import threading
 app = Flask(__name__)
 
 # بياناتك الخاصة
-BOT_TOKEN = "8664732759:AAEdqmFKSYqgd8DpIU7JlCrpsu7TRAIAHcw"
+BOT_TOKEN = 8664732759:AAEjhYPpopZn_QDY2udIAbO1v33JQeDlsmE
 CHAT_ID = "6691718718"
 WEB_URL = "https://shado-bot.onrender.com" 
 
